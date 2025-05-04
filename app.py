@@ -1,15 +1,14 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import plotly.express as px
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Jurnal Trading RissInvest", layout="centered")
-st.title("Jurnal Trading - RissInvest")
+st.set_page_config(page_title="Jurnal Trading", layout="centered")
+st.title("Jurnal Trading - SL/TP pakai Pips")
 
 CSV_FILE = "jurnal_trading.csv"
 
-# Load data jika ada
+# Load data
 try:
     df = pd.read_csv(CSV_FILE)
 except:
@@ -19,33 +18,33 @@ except:
     ])
 
 # Form input
-with st.form("trade_form"):
+with st.form("form_trade"):
     col1, col2 = st.columns(2)
     tanggal = col1.date_input("Tanggal", datetime.today())
     waktu = col2.time_input("Waktu", datetime.now().time())
     pair = st.selectbox("Pair", ["XAUUSD", "USDJPY", "EURUSD", "BTCUSD", "Lainnya"])
     arah = st.radio("Arah", ["Buy", "Sell"])
-    entry_price = st.number_input("Entry Price", format="%.2f")
-    sl_pips = st.number_input("Stop Loss (pips)", min_value=0.0, format="%.1f")
-    tp_pips = st.number_input("Take Profit (pips)", min_value=0.0, format="%.1f")
-    lot = st.number_input("Lot", min_value=0.01, value=0.01, step=0.01)
+    entry = st.number_input("Entry Price", format="%.2f")
+    sl_pip = st.number_input("Stop Loss (pips)", min_value=0.0, format="%.1f")
+    tp_pip = st.number_input("Take Profit (pips)", min_value=0.0, format="%.1f")
+    lot = st.number_input("Lot", min_value=0.01, step=0.01, value=0.01)
     status = st.selectbox("Status", ["Running", "Hit TP", "Hit SL"])
 
     submit = st.form_submit_button("Simpan Trade")
 
     if submit:
-        pip_value = 0.01 if "JPY" not in pair else 0.01
+        pip_val = 0.01  # as default, bisa disesuaikan kalau pair JPY
         if arah == "Buy":
-            sl_harga = entry_price - sl_pips * pip_value
-            tp_harga = entry_price + tp_pips * pip_value
+            sl_harga = entry - sl_pip * pip_val
+            tp_harga = entry + tp_pip * pip_val
         else:
-            sl_harga = entry_price + sl_pips * pip_value
-            tp_harga = entry_price - tp_pips * pip_value
+            sl_harga = entry + sl_pip * pip_val
+            tp_harga = entry - tp_pip * pip_val
 
         if status == "Hit TP":
-            pl = tp_pips
+            pl = tp_pip
         elif status == "Hit SL":
-            pl = -sl_pips
+            pl = -sl_pip
         else:
             pl = 0.0
 
@@ -54,9 +53,9 @@ with st.form("trade_form"):
             "Waktu": waktu,
             "Pair": pair,
             "Arah": arah,
-            "Entry Price": entry_price,
-            "SL (pips)": sl_pips,
-            "TP (pips)": tp_pips,
+            "Entry Price": entry,
+            "SL (pips)": sl_pip,
+            "TP (pips)": tp_pip,
             "SL Harga": round(sl_harga, 2),
             "TP Harga": round(tp_harga, 2),
             "Lot": lot,
@@ -68,39 +67,42 @@ with st.form("trade_form"):
         df.to_csv(CSV_FILE, index=False)
         st.success("Trade berhasil disimpan!")
 
-# Tampilkan histori
+# Tabel histori
 st.subheader("Histori Trading")
 st.dataframe(df)
 
-# Download tombol
+# Download
 st.download_button("Download CSV", df.to_csv(index=False), "jurnal_trading.csv", "text/csv")
 
 # Grafik Analisa
-st.subheader("Analisa Grafik")
-
-# Filter hanya trade yang sudah selesai
+st.subheader("Grafik Hasil Trading")
 df_done = df[df["Status"].isin(["Hit TP", "Hit SL"])].copy()
 df_done["Tanggal"] = pd.to_datetime(df_done["Tanggal"])
-df_done["Cumulative Pips"] = df_done["P/L (pip)"].cumsum()
 
 if not df_done.empty:
     # Grafik P/L per trade
-    fig1 = px.bar(df_done, x="Tanggal", y="P/L (pip)", color="Status", title="P/L per Trade")
-    st.plotly_chart(fig1, use_container_width=True)
+    st.markdown("**P/L per Trade**")
+    fig, ax = plt.subplots()
+    ax.bar(df_done["Tanggal"], df_done["P/L (pip)"], color=["green" if x > 0 else "red" for x in df_done["P/L (pip)"]])
+    ax.axhline(0, color='black', linewidth=0.8)
+    ax.set_ylabel("P/L (pip)")
+    ax.set_xlabel("Tanggal")
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
 
-    # Grafik Cumulative Pips
-    fig2 = px.line(df_done, x="Tanggal", y="Cumulative Pips", title="Cumulative Profit (Pips)")
-    st.plotly_chart(fig2, use_container_width=True)
+    # Grafik cumulative
+    st.markdown("**Cumulative Profit (Pips)**")
+    df_done["Cumulative Pips"] = df_done["P/L (pip)"].cumsum()
+    fig2, ax2 = plt.subplots()
+    ax2.plot(df_done["Tanggal"], df_done["Cumulative Pips"], marker='o')
+    ax2.set_ylabel("Total Pips")
+    ax2.set_xlabel("Tanggal")
+    plt.xticks(rotation=45)
+    st.pyplot(fig2)
 
-    # Winrate Pie Chart
-    win_count = (df_done["P/L (pip)"] > 0).sum()
-    loss_count = (df_done["P/L (pip)"] < 0).sum()
-    pie_fig = go.Figure(data=[go.Pie(
-        labels=["Menang", "Kalah"],
-        values=[win_count, loss_count],
-        hole=0.4
-    )])
-    pie_fig.update_layout(title="Rasio Menang vs Kalah")
-    st.plotly_chart(pie_fig, use_container_width=True)
+    # Winrate
+    win = (df_done["P/L (pip)"] > 0).sum()
+    lose = (df_done["P/L (pip)"] < 0).sum()
+    st.markdown(f"**Winrate: {win} Menang / {lose} Kalah**")
 else:
-    st.info("Belum ada trade selesai (TP/SL) untuk ditampilkan di grafik.")
+    st.info("Belum ada trade selesai untuk grafik.")
