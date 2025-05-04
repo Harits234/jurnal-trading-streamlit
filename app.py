@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 st.set_page_config(page_title="Jurnal Trading", layout="centered")
-st.title("Jurnal Trading - SL/TP pakai Pips")
+st.title("Jurnal Trading - RissInvest")
 
 CSV_FILE = "jurnal_trading.csv"
 
