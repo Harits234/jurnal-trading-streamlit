@@ -1,6 +1,7 @@
+# Re-run the code after code execution state reset
+code = """
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Jurnal Trading Canggih", layout="wide")
 st.title("Jurnal Trading Canggih")
@@ -56,18 +57,21 @@ st.dataframe(st.session_state.data, use_container_width=True)
 if not st.session_state.data.empty:
     st.subheader("Equity Curve")
     st.session_state.data["Equity"] = st.session_state.data["P/L"].cumsum()
-    fig, ax = plt.subplots()
-    ax.plot(st.session_state.data["Tanggal"], st.session_state.data["Equity"], marker='o')
-    ax.set_title("Grafik Equity Curve")
-    ax.set_xlabel("Tanggal")
-    ax.set_ylabel("Equity")
-    st.pyplot(fig)
+    st.line_chart(st.session_state.data.set_index("Tanggal")[["Equity"]])
 
     # Statistik
     st.subheader("Statistik")
     total_pl = st.session_state.data["P/L"].sum()
     win = st.session_state.data[st.session_state.data["P/L"] > 0].shape[0]
     loss = st.session_state.data[st.session_state.data["P/L"] <= 0].shape[0]
+    total = win + loss
+    win_rate = (win / total) * 100 if total > 0 else 0
     st.write(f"Total Profit/Loss: {total_pl:.2f}")
-    st.write(f"Win: {win} | Loss: {loss} | Win Rate: {(win / (win + loss)) * 100:.2f}%")
-    
+    st.write(f"Win: {win} | Loss: {loss} | Win Rate: {win_rate:.2f}%")
+"""
+
+file_path = "/mnt/data/app.py"
+with open(file_path, "w") as f:
+    f.write(code)
+
+file_path
