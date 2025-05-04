@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 st.set_page_config(page_title="Jurnal Trading", layout="centered")
-st.title("Jurnal Trading - RissInvest")
+st.title("Jurnal Trading - SL/TP pakai Pips")
 
 CSV_FILE = "jurnal_trading.csv"
 
@@ -45,7 +45,8 @@ with st.form("input_trade"):
             "P/L (pip)": pl
         }
 
-        df = df.append(new_trade, ignore_index=True)
+        # Gunakan pd.concat untuk menambah data
+        df = pd.concat([df, pd.DataFrame([new_trade])], ignore_index=True)
         df.to_csv(CSV_FILE, index=False)
         st.success("Trade berhasil disimpan!")
 
